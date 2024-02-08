@@ -1,11 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
-	"os"
-
 	"netcat/client"
+	"os"
+	"sync"
+)
+
+var (
+	clients   []*client.Client
+	clientsMu sync.Mutex
 )
 
 var port = "8989"
@@ -23,12 +29,14 @@ func main() {
 	}
 
 	defer listener.Close()
+	log.Printf("Listening on port %v", port)
 
 	for {
 		// accept incoming connections
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Fatalf("Error accepting connections: %v", err)
+			fmt.Printf("Error accepting connections: %s\n", err.Error())
+			continue // if error encounterd try again
 		}
 
 		// handle client connection in a goroutine

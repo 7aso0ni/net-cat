@@ -3,13 +3,34 @@ package client
 import (
 	"log"
 	"net"
+	"os"
 )
 
+// Client represents a connected client
+type Client struct {
+	Conn     net.Conn
+	Username string
+}
+
+func WelcomeMsg() string {
+	file, err := os.ReadFile("./WelcomeMsg.txt")
+	if err != nil {
+		log.Fatalf("Error Reading file: %v", err)
+	}
+
+	return string(file) + "\n"
+}
+
 func HandleClient(conn net.Conn) {
-	defer conn.Close()
+	penguin := WelcomeMsg()
+	_, err := conn.Write([]byte(penguin + "[ENTER YOUR NAME]:"))
+	if err != nil {
+		log.Fatalf("Error sending welcome message: %v", err.Error())
+	}
 
 	buffer := make([]byte, 1024)
 
+	// I have no Idea what is this
 	for {
 		_, err := conn.Read(buffer)
 		if err != nil {
@@ -22,4 +43,5 @@ func HandleClient(conn net.Conn) {
 			log.Fatal("Error Writing data to server")
 		}
 	}
+
 }
