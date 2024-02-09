@@ -17,7 +17,7 @@ func main() {
 	}
 
 	// creating a tcp connection
-	listener, err := net.Listen("tcp", ":"+port) // for not it's localhost. subjected to change
+	listener, err := net.Listen("tcp", ":"+port) // for now it's localhost. subjected to change
 	if err != nil {
 		log.Fatalf("Error Listning to the tcp connection: %v", err)
 	}

@@ -2,7 +2,6 @@ package client
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -32,7 +31,7 @@ func WelcomeMsg() string {
 }
 
 func HandleClient(conn net.Conn) {
-	var buffer = make([]byte, 1024)
+	// var buffer = make([]byte, 1024)
 
 	_, err := conn.Write([]byte(WelcomeMsg()))
 	if err != nil {
@@ -45,7 +44,7 @@ takenUsername:
 	}
 
 	reader := bufio.NewReader(conn)
-	line, err := reader.ReadString('\n')
+	line, err := reader.ReadString('\n') //read the entire line from the client
 	if err != nil {
 		log.Fatalf("Error Reading client name: %v", err.Error())
 	}
@@ -60,22 +59,17 @@ takenUsername:
 	mu.Unlock()
 
 	c := &Client{Username: line, Conn: conn}
-	clients = append(clients, c)
-
-	fmt.Println(clients)
+	if len(clients) < 10 { // limit to 10 clients per server
+		clients = append(clients, c)
+	}
 
 	// I have no Idea what to do with this
 	for {
-		_, err := conn.Read(buffer)
+		line, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatalf("something went wrong with reading from client: %v", err)
+			log.Fatalf("Error Reading from client: %v", err.Error())
 		}
-
-		// printing what is written to the client
-		_, err = conn.Write(buffer)
-		if err != nil {
-			log.Fatal("Error Writing data to server")
-		}
+		BroadcastToAllClients(line)
 	}
 
 }
