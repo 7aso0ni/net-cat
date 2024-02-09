@@ -19,7 +19,14 @@ func main() {
 	// creating a tcp connection
 	listener, err := net.Listen("tcp", ":"+port) // for now it's localhost. subjected to change
 	if err != nil {
-		log.Fatalf("Error Listning to the tcp connection: %v", err)
+		conn, err := net.Dial("tcp", ":"+port)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		defer conn.Close()
+		//log.Fatalf("Error Listning to the tcp connection: %v", err)
+
 	}
 
 	defer listener.Close()
