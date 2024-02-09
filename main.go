@@ -6,12 +6,6 @@ import (
 	"net"
 	"netcat/client"
 	"os"
-	"sync"
-)
-
-var (
-	clients   []*client.Client
-	clientsMu sync.Mutex
 )
 
 var port = "8989"
