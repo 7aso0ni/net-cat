@@ -3,6 +3,7 @@ package client
 import "fmt"
 
 func BroadcastToAllClients(message string) {
+	// TODO: store chat history in a file
 	chathistory = append(chathistory, message) // Add to universal log
 	mu.Lock()
 	defer mu.Unlock()

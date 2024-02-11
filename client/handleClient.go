@@ -35,8 +35,6 @@ func WelcomeMsg() []byte {
 }
 
 func HandleClient(conn net.Conn) {
-	// var buffer = make([]byte, 1024)
-
 	_, err := conn.Write(WelcomeMsg())
 	if err != nil {
 		log.Fatalf("Error sending welcome message: %v", err.Error())
@@ -75,13 +73,15 @@ takenUsername:
 		return
 	}
 
+	// shared resourses should be locked to prevent errors
+	mu.Lock()
 	for _, msg := range chathistory {
 		conn.Write([]byte(msg)) // Catch up the new user on previous messages
 	}
+	mu.Unlock()
 
-	BroadcastToAllClients("Welcome " + c.Username + " to the chat!\n") // Welcome message
+	BroadcastToAllClients(c.Username + " has joined out chat...\n") // Welcome message
 
-	// I have no Idea what to do with this
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -90,6 +90,6 @@ takenUsername:
 			c.Active = false
 			break
 		}
-		BroadcastToAllClients(c.Username + ": " + line)
+		BroadcastToAllClients("[" + time.Now().Format("2006-01-02 15:04:05") + "]" + "[" + c.Username + "]" + ": " + line)
 	}
 }
