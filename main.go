@@ -17,7 +17,8 @@ func main() {
 	}
 
 	// creating a tcp connection
-	listener, err := net.Listen("tcp", client.GetLocalIP().String()+":"+port) // listen on local ip
+	ip := client.GetLocalIP()
+	listener, err := net.Listen("tcp", ip.String()+":"+port) // listen on local ip
 	if err != nil {
 		conn, err := net.Dial("tcp", ":"+port)
 		if err != nil {
@@ -31,7 +32,7 @@ func main() {
 	}
 
 	defer listener.Close()
-	log.Printf("Listening on host %v:%v", client.GetLocalIP(), port)
+	log.Printf("Listening on host %v:%v", ip, port)
 
 	for {
 		// accept incoming connections

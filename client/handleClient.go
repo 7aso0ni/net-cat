@@ -82,7 +82,7 @@ takenUsername:
 	}
 	mu.Unlock()
 
-	BroadcastToAllClients(c.Username + " has joined out chat...\n") // Welcome message
+	BroadcastToAllClients(c.Username + " has joined out chat!\n") // Welcome message
 
 	for {
 		line, err := reader.ReadString('\n')
@@ -97,6 +97,8 @@ takenUsername:
 }
 
 func DeleteClient(UID int) {
+	mu.Lock()
+	defer mu.Unlock()
 	checkUsername[clients[UID].Username] = false        // Forget Username
 	clients = append(clients[:UID], clients[UID+1:]...) // Remove Username
 	for UID < len(clients) {                            //Update UIDs
