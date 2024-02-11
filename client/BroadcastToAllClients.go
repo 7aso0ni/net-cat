@@ -9,10 +9,8 @@ func BroadcastToAllClients(message string) {
 	defer mu.Unlock()
 
 	for _, client := range clients {
-		if client.Active {
-			if _, err := client.Conn.Write([]byte(message)); err != nil {
-				fmt.Println("Error writing to client: " + client.Username)
-			}
+		if _, err := client.Conn.Write([]byte(message)); err != nil {
+			fmt.Println("Error writing to client: " + client.Username)
 		}
 	}
 }
