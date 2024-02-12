@@ -14,3 +14,17 @@ func BroadcastToAllClients(message string) {
 		}
 	}
 }
+
+func BroadcastMessageToOthers(message string, exclude *Client) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	for _, client := range clients {
+		if client != exclude {
+			_, err := client.Conn.Write([]byte(message))
+			if err != nil {
+				fmt.Println("Error writing to client:", err)
+			}
+		}
+	}
+}

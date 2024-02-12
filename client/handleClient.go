@@ -58,7 +58,8 @@ takenUsername:
 	}
 	//mu.Lock() -- Honestly dont know why this is here here but having the client-side when the username was taken
 
-	if checkUsername[name] {
+	// making the username unique
+	if checkUsername[strings.ToLower(name)] {
 		conn.Write([]byte("Username already taken\n"))
 		time.Sleep(1 * time.Second)
 		goto takenUsername // this will go back to the tag and reset the operation
@@ -82,7 +83,7 @@ takenUsername:
 	}
 	mu.Unlock()
 
-	BroadcastToAllClients(c.Username + " has joined out chat!\n") // Welcome message
+	BroadcastMessageToOthers(c.Username+" has joined out chat!\n", c) // Welcome message}
 
 	for {
 		line, err := reader.ReadString('\n')
