@@ -40,30 +40,8 @@ func HandleClient(conn net.Conn) {
 		log.Fatalf("Error sending welcome message: %v", err.Error())
 	}
 
-takenUsername:
-	if _, err = conn.Write([]byte("[ENTER YOUR NAME]:")); err != nil {
-		log.Fatalf("Error sending welcome message: %v", err.Error())
-	}
 	reader := bufio.NewReader(conn)
-	name, err := reader.ReadString('\n') //read the entire line from the client
-	if err != nil {
-		log.Fatalf("Error Reading client name: %v", err.Error())
-	}
-
-	name = name[:len(name)-1]
-	if name == "" || strings.Contains(name, " ") {
-		conn.Write([]byte("Name shouldn't be empty or contain any spaces\n"))
-		time.Sleep(1 * time.Second) // give client time to read
-		goto takenUsername          // this will go back to the tag and reset the operation
-	}
-
-	// making the username unique
-	if checkUsername[strings.ToLower(name)] {
-		conn.Write([]byte("Username already taken\n"))
-		time.Sleep(1 * time.Second)
-		goto takenUsername
-	}
-	checkUsername[strings.ToLower(name)] = true
+	name := GetUserName(conn, reader)
 
 	c := &Client{Username: name, Conn: conn, UID: len(clients)}
 	if len(clients) < 10 { // limit to 10 clients per server
@@ -90,10 +68,18 @@ takenUsername:
 			DeleteClient(c.UID)
 			break
 		}
-		if line != "\n" {
-			Broadcast("["+time.Now().Format("2006-01-02 15:04:05")+"]["+c.Username+"]:"+line, c, true)
-		} else {
+		if line == "\n" {
 			conn.Write([]byte("[" + time.Now().Format("2006-01-02 15:04:05") + "][" + c.Username + "]:"))
+		} else if strings.ToLower(line) == "--changename\n" {
+			name = GetUserName(conn, reader) // Get new name
+			mu.Lock()
+			oldName := c.Username
+			c.Username = name
+			delete(checkUsername, strings.ToLower(oldName)) // Forget old name
+			mu.Unlock()
+			Broadcast(oldName+" has changed his name to "+name+"\n", c, false)
+		} else {
+			Broadcast("["+time.Now().Format("2006-01-02 15:04:05")+"]["+c.Username+"]:"+line, c, true)
 		}
 	}
 }
@@ -101,10 +87,37 @@ takenUsername:
 func DeleteClient(UID int) {
 	mu.Lock()
 	defer mu.Unlock()
-	delete(checkUsername, clients[UID].Username)        // Forget Username
-	clients = append(clients[:UID], clients[UID+1:]...) // Remove Username
-	for UID < len(clients) {                            //Update UIDs
+	delete(checkUsername, strings.ToLower(clients[UID].Username)) // Forget Username
+	clients = append(clients[:UID], clients[UID+1:]...)           // Remove Username
+	for UID < len(clients) {                                      //Update UIDs
 		clients[UID].UID = UID
 		UID++
 	}
+}
+
+func GetUserName(conn net.Conn, reader *bufio.Reader) string {
+takenUsername:
+	if _, err := conn.Write([]byte("[ENTER YOUR NAME]:")); err != nil {
+		log.Fatalf("Error sending welcome message: %v", err.Error())
+	}
+	name, err := reader.ReadString('\n') //read the entire line from the client
+	if err != nil {
+		log.Fatalf("Error Reading client name: %v", err.Error())
+	}
+
+	name = name[:len(name)-1]
+	if name == "" || strings.Contains(name, " ") {
+		conn.Write([]byte("Name shouldn't be empty or contain any spaces\n"))
+		time.Sleep(1 * time.Second) // give client time to read
+		goto takenUsername          // this will go back to the tag and reset the operation
+	}
+
+	// making the username unique
+	if checkUsername[strings.ToLower(name)] {
+		conn.Write([]byte("Username already taken\n"))
+		time.Sleep(1 * time.Second)
+		goto takenUsername
+	}
+	checkUsername[strings.ToLower(name)] = true
+	return name
 }
