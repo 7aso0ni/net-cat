@@ -54,25 +54,23 @@ takenUsername:
 	if name == "" || strings.Contains(name, " ") {
 		conn.Write([]byte("Name shouldn't be empty or contain any spaces\n"))
 		time.Sleep(1 * time.Second) // give client time to read
-		goto takenUsername
+		goto takenUsername          // this will go back to the tag and reset the operation
 	}
-	//mu.Lock() -- Honestly dont know why this is here here but having the client-side when the username was taken
 
 	// making the username unique
 	if checkUsername[strings.ToLower(name)] {
 		conn.Write([]byte("Username already taken\n"))
 		time.Sleep(1 * time.Second)
-		goto takenUsername // this will go back to the tag and reset the operation
+		goto takenUsername
 	}
-	checkUsername[name] = true
-	//mu.Unlock()
+	checkUsername[strings.ToLower(name)] = true
 
 	c := &Client{Username: name, Conn: conn, UID: len(clients)}
 	if len(clients) < 10 { // limit to 10 clients per server
 		clients = append(clients, c)
 	} else {
 		conn.Write([]byte("Too many users, get out\n"))
-		conn.Close() // Still accepts one more input for some reason but doesnt do anything with it
+		conn.Close()
 		return
 	}
 
@@ -83,17 +81,20 @@ takenUsername:
 	}
 	mu.Unlock()
 
-	BroadcastMessageToOthers(c.Username+" has joined out chat!\n", c) // Welcome message}
+	Broadcast(c.Username+" has joined out chat!\n", c, false) // Welcome message
 
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			//log.Fatalf("Error Reading from client: %v", err.Error())
-			BroadcastToAllClients(c.Username + " has disconnected...\n")
+			Broadcast(c.Username+" has left our chat...\n", c, false) // Exit message
 			DeleteClient(c.UID)
 			break
 		}
-		BroadcastToAllClients("[" + time.Now().Format("2006-01-02 15:04:05") + "][" + c.Username + "]: " + line)
+		if line != "\n" {
+			Broadcast("["+time.Now().Format("2006-01-02 15:04:05")+"]["+c.Username+"]:"+line, c, true)
+		} else {
+			conn.Write([]byte("[" + time.Now().Format("2006-01-02 15:04:05") + "][" + c.Username + "]:"))
+		}
 	}
 }
 
