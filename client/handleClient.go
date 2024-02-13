@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"net"
+	"netcat/ui"
 	"os"
 	"strings"
 	"sync"
@@ -46,6 +47,7 @@ func HandleClient(conn net.Conn) {
 	c := &Client{Username: name, Conn: conn, UID: len(clients)}
 	if len(clients) < 10 { // limit to 10 clients per server
 		clients = append(clients, c)
+		ui.AddClient(name)
 	} else {
 		conn.Write([]byte("Too many users, get out\n"))
 		conn.Close()
@@ -69,7 +71,7 @@ func HandleClient(conn net.Conn) {
 			break
 		}
 		if line == "\n" {
-			conn.Write([]byte("[" + time.Now().Format("2006-01-02 15:04:05") + "][" + c.Username + "]:"))
+			conn.Write([]byte(headerStr(c.Username)))
 		} else if strings.ToLower(line) == "--changename\n" {
 			name = GetUserName(conn, reader) // Get new name
 			mu.Lock()
@@ -79,7 +81,7 @@ func HandleClient(conn net.Conn) {
 			mu.Unlock()
 			Broadcast(oldName+" has changed his name to "+name+"\n", c, false)
 		} else {
-			Broadcast("["+time.Now().Format("2006-01-02 15:04:05")+"]["+c.Username+"]:"+line, c, true)
+			Broadcast(headerStr(c.Username)+line, c, true)
 		}
 	}
 }
@@ -89,7 +91,8 @@ func DeleteClient(UID int) {
 	defer mu.Unlock()
 	delete(checkUsername, strings.ToLower(clients[UID].Username)) // Forget Username
 	clients = append(clients[:UID], clients[UID+1:]...)           // Remove Username
-	for UID < len(clients) {                                      //Update UIDs
+	ui.DeleteClient(UID)
+	for UID < len(clients) { //Update UIDs
 		clients[UID].UID = UID
 		UID++
 	}

@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"netcat/client"
+	"netcat/ui"
 	"os"
 )
 
 var port = "8989"
+var ip net.IP
 
 func main() {
 	// checking if port was passed
@@ -17,7 +18,7 @@ func main() {
 	}
 
 	// creating a tcp connection
-	ip := client.GetLocalIP()
+	ip = client.GetLocalIP()
 	listener, err := net.Listen("tcp", ip.String()+":"+port) // listen on local ip
 	if err != nil {
 		conn, err := net.Dial("tcp", ":"+port)
@@ -32,7 +33,9 @@ func main() {
 	}
 
 	defer listener.Close()
-	log.Printf("Listening on host %v:%v", ip, port)
+
+	go ui.OpenUI()
+	ui.Header = fmt.Sprintf("Listening on host %v:%v", ip, port)
 
 	for {
 		// accept incoming connections
@@ -41,7 +44,7 @@ func main() {
 			fmt.Printf("Error accepting connections: %s\n", err.Error())
 			continue // if error encounterd try again
 		}
-
+		ui.Count++
 		// handle client connection in a goroutine
 		go client.HandleClient(conn)
 	}
