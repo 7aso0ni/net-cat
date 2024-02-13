@@ -10,14 +10,14 @@ import (
 
 var (
 	Header        string
-	Count         int
+	MessageCount  int
 	GUI           *gocui.Gui
 	ClientList    []string
 	latestMessage string
 )
 
 func OpenUI() {
-	Count = 0
+	MessageCount = 0
 	g, err := gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
 		log.Panicln(err)
@@ -51,12 +51,18 @@ func layout(g *gocui.Gui) error {
 		return err
 	}
 	// Client Viewer
+	if maxY < 3 {
+		maxY = 3
+	}
+	if maxX < 4 {
+		maxX = 4
+	}
 	v, err = g.SetView("clients", 0, 1, maxX/2-1, maxY-1)
 	if err == gocui.ErrUnknownView {
-		v.Title = "Clients"
+		v.Title = "Clients[0]"
 	} else if err == nil {
 		v.Clear()
-		fmt.Fprintf(v, "Count: %v\n", len(ClientList))
+		v.FgColor = gocui.ColorMagenta
 		for _, c := range ClientList {
 			fmt.Fprintln(v, c)
 		}
@@ -66,7 +72,9 @@ func layout(g *gocui.Gui) error {
 	// Logs Viewer
 	v, err = g.SetView("logs", maxX/2, 1, maxX-1, maxY-1)
 	if err == gocui.ErrUnknownView {
-		v.Title = "Logs"
+		v.Title = "Logs[0]"
+		v.Autoscroll = true
+		v.FgColor = gocui.ColorGreen
 	} else if err != nil {
 		return err
 	}
@@ -92,8 +100,8 @@ func UpdateClients(g *gocui.Gui) error {
 	if err != nil {
 		return err
 	}
+	v.Title = fmt.Sprintf("Clients[%v]", len(ClientList))
 	v.Clear()
-	fmt.Fprintf(v, "Count: %v\n", len(ClientList))
 	for _, c := range ClientList {
 		fmt.Fprintln(v, c)
 	}
@@ -102,11 +110,13 @@ func UpdateClients(g *gocui.Gui) error {
 
 func AddMessage(message string) {
 	latestMessage = message
+	MessageCount++
 	GUI.Update(UpdateLogs)
 }
 
 func UpdateLogs(g *gocui.Gui) error {
 	v, err := GUI.View("logs")
+	v.Title = fmt.Sprintf("Logs[%v]", MessageCount)
 	if err != nil {
 		return err
 	}

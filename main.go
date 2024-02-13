@@ -44,7 +44,6 @@ func main() {
 			fmt.Printf("Error accepting connections: %s\n", err.Error())
 			continue // if error encounterd try again
 		}
-		ui.Count++
 		// handle client connection in a goroutine
 		go client.HandleClient(conn)
 	}
