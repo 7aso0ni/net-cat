@@ -89,7 +89,7 @@ func DeleteClient(UID int) {
 	defer mu.Unlock()
 	delete(checkUsername, strings.ToLower(clients[UID].Username)) // Forget Username
 	clients = append(clients[:UID], clients[UID+1:]...)           // Remove Username
-	for UID < len(clients) {                                      //Update UIDs
+	for UID < len(clients) {                                      // Update UIDs
 		clients[UID].UID = UID
 		UID++
 	}

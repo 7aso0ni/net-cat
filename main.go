@@ -16,6 +16,11 @@ func main() {
 		port = os.Args[1]
 	}
 
+	if len(os.Args) > 2 {
+		fmt.Println("[USAGE]: ./TCPChat $port")
+		return
+	}
+
 	// creating a tcp connection
 	ip := client.GetLocalIP()
 	listener, err := net.Listen("tcp", ip.String()+":"+port) // listen on local ip
