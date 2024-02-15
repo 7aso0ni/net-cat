@@ -81,6 +81,12 @@ func HandleClient(conn net.Conn) {
 			delete(checkUsername, strings.ToLower(oldName)) // Forget old name
 			mu.Unlock()
 			Broadcast(oldName+" has changed his name to "+name+"\n", c, false)
+		} else if strings.ToLower(line) == "--help\n" {
+			conn.Write([]byte("------------------------commands--------------------------\n"))
+			conn.Write([]byte("Available flags are:\n"))
+			conn.Write([]byte("--changename (changes the users name)\n--quit (exits the chat)"))
+		} else if strings.ToLower(line) == "--quit\n"{
+			conn.Close()
 		} else {
 			Broadcast(headerStr(c.Username)+line, c, true)
 		}
@@ -109,7 +115,7 @@ takenUsername:
 		log.Fatalf("Error Reading client name: %v", err.Error())
 	}
 
-	name = name[:len(name)-1]
+	name = strings.TrimSpace(name[:len(name)-1])
 	if name == "" || strings.Contains(name, " ") {
 		conn.Write([]byte("Name shouldn't be empty or contain any spaces\n"))
 		time.Sleep(1 * time.Second) // give client time to read
