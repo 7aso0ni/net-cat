@@ -60,9 +60,11 @@ func layout(g *gocui.Gui) error {
 	v, err = g.SetView("clients", 0, 1, maxX/2-1, maxY-1)
 	if err == gocui.ErrUnknownView {
 		v.Title = "Clients[0]"
+		v.FgColor = gocui.ColorMagenta
+		v.Autoscroll = true
+		v.Wrap = true
 	} else if err == nil {
 		v.Clear()
-		v.FgColor = gocui.ColorMagenta
 		for _, c := range ClientList {
 			fmt.Fprintln(v, c)
 		}
@@ -75,6 +77,7 @@ func layout(g *gocui.Gui) error {
 		v.Title = "Logs[0]"
 		v.Autoscroll = true
 		v.FgColor = gocui.ColorGreen
+		v.Wrap = true
 	} else if err != nil {
 		return err
 	}
@@ -92,6 +95,11 @@ func AddClient(client string) {
 
 func DeleteClient(UID int) {
 	ClientList = append(ClientList[:UID], ClientList[UID+1:]...)
+	GUI.Update(UpdateClients)
+}
+
+func ReplaceClient(UID int, client string) {
+	ClientList[UID] = client
 	GUI.Update(UpdateClients)
 }
 

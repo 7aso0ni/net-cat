@@ -73,7 +73,8 @@ func HandleClient(conn net.Conn) {
 		if line == "\n" {
 			conn.Write([]byte(headerStr(c.Username)))
 		} else if strings.ToLower(line) == "--changename\n" {
-			name = GetUserName(conn, reader) // Get new name
+			name = GetUserName(conn, reader) // Get new name+*-
+			ui.ReplaceClient(c.UID, name)
 			mu.Lock()
 			oldName := c.Username
 			c.Username = name
@@ -113,6 +114,12 @@ takenUsername:
 		conn.Write([]byte("Name shouldn't be empty or contain any spaces\n"))
 		time.Sleep(1 * time.Second) // give client time to read
 		goto takenUsername          // this will go back to the tag and reset the operation
+	}
+
+	if len(name) > 20 {
+		conn.Write([]byte("Name can't be longer than 20 characters"))
+		time.Sleep(1 * time.Second)
+		goto takenUsername
 	}
 
 	// making the username unique
