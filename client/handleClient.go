@@ -35,6 +35,15 @@ func WelcomeMsg() []byte {
 	return append(file, '\n')
 }
 
+func CommandList() []byte {
+	file, err := os.ReadFile("./CommandList.txt")
+	if err != nil {
+		log.Fatalf("Error Reading file: %v", err)
+	}
+
+	return append(file, '\n')
+}
+
 func HandleClient(conn net.Conn) {
 	_, err := conn.Write(WelcomeMsg())
 	if err != nil {
@@ -82,11 +91,12 @@ func HandleClient(conn net.Conn) {
 			mu.Unlock()
 			Broadcast(oldName+" has changed his name to "+name+"\n", c, false)
 		} else if strings.ToLower(line) == "--help\n" {
-			conn.Write([]byte("------------------------commands--------------------------\n"))
-			conn.Write([]byte("Available flags are:\n"))
-			conn.Write([]byte("--changename (changes the users name)\n--quit (exits the chat)"))
-		} else if strings.ToLower(line) == "--quit\n"{
+			conn.Write(append(CommandList(), []byte(headerStr(c.Username))...))
+		} else if strings.ToLower(line) == "--quit\n" {
 			conn.Close()
+			DeleteClient(c.UID)
+			Broadcast(c.Username+" has left our chat...\n", c, false) // Exit message
+			break
 		} else {
 			Broadcast(headerStr(c.Username)+line, c, true)
 		}
@@ -96,6 +106,7 @@ func HandleClient(conn net.Conn) {
 func DeleteClient(UID int) {
 	mu.Lock()
 	defer mu.Unlock()
+	clients[UID].Conn.Close()
 	delete(checkUsername, strings.ToLower(clients[UID].Username)) // Forget Username
 	clients = append(clients[:UID], clients[UID+1:]...)           // Remove Username
 	ui.DeleteClient(UID)

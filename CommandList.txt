@@ -1,0 +1,5 @@
+
+------------------------commands--------------------------
+Available flags are:
+--changename (changes the users name)
+--quit (exits the chat)
