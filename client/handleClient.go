@@ -35,6 +35,15 @@ func WelcomeMsg() []byte {
 	return append(file, '\n')
 }
 
+func CommandList() []byte {
+	file, err := os.ReadFile("./CommandList.txt")
+	if err != nil {
+		log.Fatalf("Error Reading file: %v", err)
+	}
+
+	return append(file, '\n')
+}
+
 func HandleClient(conn net.Conn) {
 	_, err := conn.Write(WelcomeMsg())
 	if err != nil {
@@ -73,13 +82,21 @@ func HandleClient(conn net.Conn) {
 		if line == "\n" {
 			conn.Write([]byte(headerStr(c.Username)))
 		} else if strings.ToLower(line) == "--changename\n" {
-			name = GetUserName(conn, reader) // Get new name
+			name = GetUserName(conn, reader) // Get new name+*-
+			ui.ReplaceClient(c.UID, name)
 			mu.Lock()
 			oldName := c.Username
 			c.Username = name
 			delete(checkUsername, strings.ToLower(oldName)) // Forget old name
 			mu.Unlock()
 			Broadcast(oldName+" has changed his name to "+name+"\n", c, false)
+		} else if strings.ToLower(line) == "--help\n" {
+			conn.Write(append(CommandList(), []byte(headerStr(c.Username))...))
+		} else if strings.ToLower(line) == "--quit\n" {
+			conn.Close()
+			DeleteClient(c.UID)
+			Broadcast(c.Username+" has left our chat...\n", c, false) // Exit message
+			break
 		} else {
 			Broadcast(headerStr(c.Username)+line, c, true)
 		}
@@ -89,6 +106,7 @@ func HandleClient(conn net.Conn) {
 func DeleteClient(UID int) {
 	mu.Lock()
 	defer mu.Unlock()
+	clients[UID].Conn.Close()
 	delete(checkUsername, strings.ToLower(clients[UID].Username)) // Forget Username
 	clients = append(clients[:UID], clients[UID+1:]...)           // Remove Username
 	ui.DeleteClient(UID)
@@ -108,11 +126,17 @@ takenUsername:
 		log.Fatalf("Error Reading client name: %v", err.Error())
 	}
 
-	name = name[:len(name)-1]
+	name = strings.TrimSpace(name[:len(name)-1])
 	if name == "" || strings.Contains(name, " ") {
 		conn.Write([]byte("Name shouldn't be empty or contain any spaces\n"))
 		time.Sleep(1 * time.Second) // give client time to read
 		goto takenUsername          // this will go back to the tag and reset the operation
+	}
+
+	if len(name) > 20 {
+		conn.Write([]byte("Name can't be longer than 20 characters"))
+		time.Sleep(1 * time.Second)
+		goto takenUsername
 	}
 
 	// making the username unique
