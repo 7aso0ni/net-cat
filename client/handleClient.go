@@ -2,10 +2,12 @@ package client
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"net"
 	"netcat/ui"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -72,15 +74,26 @@ func HandleClient(conn net.Conn) {
 
 	Broadcast(c.Username+" has joined out chat!\n", c, false) // Welcome message
 
+	// if message only has spaces
+	regex, err := regexp.Compile(`^\s*$`)
+	if err != nil {
+		fmt.Println("Error compiling regex")
+		return
+	}
 	for {
+	readMessage:
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			Broadcast(c.Username+" has left our chat...\n", c, false) // Exit message
 			DeleteClient(c.UID)
 			break
 		}
-		if line == "\n" {
+
+		// if the messages doesn't contain any characters
+		if line == "\n" || regex.MatchString(line) {
+			conn.Write([]byte("Empty messages are not allowed\n"))
 			conn.Write([]byte(headerStr(c.Username)))
+			goto readMessage // re-read the message again
 		} else if strings.ToLower(line) == "--changename\n" {
 			name = GetUserName(conn, reader) // Get new name+*-
 			ui.ReplaceClient(c.UID, name)
@@ -126,7 +139,7 @@ takenUsername:
 		log.Fatalf("Error Reading client name: %v", err.Error())
 	}
 
-	name = strings.TrimSpace(name[:len(name)-1])
+	name = strings.TrimSpace(name[:len(name)-1]) // remove any excessive spaces
 	if name == "" || strings.Contains(name, " ") {
 		conn.Write([]byte("Name shouldn't be empty or contain any spaces\n"))
 		time.Sleep(1 * time.Second) // give client time to read
