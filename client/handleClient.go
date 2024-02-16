@@ -7,7 +7,6 @@ import (
 	"net"
 	"netcat/ui"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -53,7 +52,11 @@ func HandleClient(conn net.Conn) {
 	}
 
 	reader := bufio.NewReader(conn)
-	name := GetUserName(conn, reader)
+	name, err := GetUserName(conn, reader)
+	if err != nil {
+		conn.Close()
+		return
+	}
 
 	c := &Client{Username: name, Conn: conn, UID: len(clients)}
 	if len(clients) < 10 { // limit to 10 clients per server
@@ -75,7 +78,6 @@ func HandleClient(conn net.Conn) {
 	Broadcast(c.Username+" has joined out chat!\n", c, false) // Welcome message
 
 	// if message only has spaces
-	regex, err := regexp.Compile(`^\s*$`)
 	if err != nil {
 		fmt.Println("Error compiling regex")
 		return
@@ -88,14 +90,20 @@ func HandleClient(conn net.Conn) {
 			DeleteClient(c.UID)
 			break
 		}
-
 		// if the messages doesn't contain any characters
-		if line == "\n" || regex.MatchString(line) {
+		line = strings.ReplaceAll(line, "\x1b[", "")
+		fmt.Println(line)
+		if line == "\n" || len(strings.Fields(line)) == 0 {
 			conn.Write([]byte("Empty messages are not allowed\n"))
 			conn.Write([]byte(headerStr(c.Username)))
 			goto readMessage // re-read the message again
 		} else if strings.ToLower(line) == "--changename\n" {
-			name = GetUserName(conn, reader) // Get new name+*-
+			name, err = GetUserName(conn, reader) // Get new name+*-
+			if err != nil {
+				Broadcast(c.Username+" has left our chat...\n", c, false) // Exit message
+				DeleteClient(c.UID)
+				break
+			}
 			ui.ReplaceClient(c.UID, name)
 			mu.Lock()
 			oldName := c.Username
@@ -129,14 +137,14 @@ func DeleteClient(UID int) {
 	}
 }
 
-func GetUserName(conn net.Conn, reader *bufio.Reader) string {
+func GetUserName(conn net.Conn, reader *bufio.Reader) (string, error) {
 takenUsername:
 	if _, err := conn.Write([]byte("[ENTER YOUR NAME]:")); err != nil {
-		log.Fatalf("Error sending welcome message: %v", err.Error())
+		return "", err
 	}
 	name, err := reader.ReadString('\n') //read the entire line from the client
 	if err != nil {
-		log.Fatalf("Error Reading client name: %v", err.Error())
+		return name, err
 	}
 
 	name = strings.TrimSpace(name[:len(name)-1]) // remove any excessive spaces
@@ -159,5 +167,5 @@ takenUsername:
 		goto takenUsername
 	}
 	checkUsername[strings.ToLower(name)] = true
-	return name
+	return name, nil
 }
