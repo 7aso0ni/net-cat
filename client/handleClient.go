@@ -2,7 +2,6 @@ package client
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"net"
 	"netcat/ui"
@@ -77,13 +76,7 @@ func HandleClient(conn net.Conn) {
 
 	Broadcast(c.Username+" has joined out chat!\n", c, false) // Welcome message
 
-	// if message only has spaces
-	if err != nil {
-		fmt.Println("Error compiling regex")
-		return
-	}
 	for {
-	readMessage:
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			Broadcast(c.Username+" has left our chat...\n", c, false) // Exit message
@@ -92,11 +85,10 @@ func HandleClient(conn net.Conn) {
 		}
 		// if the messages doesn't contain any characters
 		line = strings.ReplaceAll(line, "\x1b[", "")
-		fmt.Println(line)
 		if line == "\n" || len(strings.Fields(line)) == 0 {
-			conn.Write([]byte("Empty messages are not allowed\n"))
-			conn.Write([]byte(headerStr(c.Username)))
-			goto readMessage // re-read the message again
+			conn.Write([]byte("Empty messages are not allowed\n" + headerStr(c.Username)))
+		} else if len(line) > 200 {
+			conn.Write([]byte("Message can not be longer than 200 characters\n" + headerStr(c.Username)))
 		} else if strings.ToLower(line) == "--changename\n" {
 			name, err = GetUserName(conn, reader) // Get new name+*-
 			if err != nil {
@@ -155,7 +147,7 @@ takenUsername:
 	}
 
 	if len(name) > 20 {
-		conn.Write([]byte("Name can't be longer than 20 characters"))
+		conn.Write([]byte("Name can't be longer than 20 characters\n"))
 		time.Sleep(1 * time.Second)
 		goto takenUsername
 	}
