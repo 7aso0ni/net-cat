@@ -26,7 +26,6 @@ func main() {
 			fmt.Println("Error:", err)
 			return
 		}
-
 		defer conn.Close()
 		//log.Fatalf("Error Listning to the tcp connection: %v", err)
 
